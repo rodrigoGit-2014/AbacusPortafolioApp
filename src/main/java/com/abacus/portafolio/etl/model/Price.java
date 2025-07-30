@@ -1,5 +1,6 @@
 package com.abacus.portafolio.etl.model;
 
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -15,10 +16,10 @@ public class Price {
     @Id
     @GeneratedValue
     private Long id;
-
     @ManyToOne
     private Asset asset;
-
     private LocalDate date;
-    private BigDecimal value;
+    private BigDecimal priceAmount;
+
+
 }

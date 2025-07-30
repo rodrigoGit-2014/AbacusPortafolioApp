@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface PriceRepository extends JpaRepository<Price, Long> {
 
     Optional<Price> findByAssetAndDate(Asset asset, LocalDate date);
+    Price findFirstByOrderByDateAsc();
+
 }

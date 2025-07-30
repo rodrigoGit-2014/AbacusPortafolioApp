@@ -4,11 +4,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Entity
-public class Quantity {
+@Data
+public class AssetQuantity {
     @Id
     @GeneratedValue
     private Long id;
@@ -19,5 +21,5 @@ public class Quantity {
     @ManyToOne
     private Portfolio portfolio;
 
-    private BigDecimal value; // c_{i,t}, initially c_{i,0}
+    private BigDecimal amount; // c_{i,t}, initially c_{i,0}
 }
