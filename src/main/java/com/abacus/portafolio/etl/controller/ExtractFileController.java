@@ -20,7 +20,7 @@ public class ExtractFileController {
 
     @PostMapping("/import-excel")
     public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile file) {
-        extractFileService.importarDesdeExcel(file);
+        extractFileService.importFromExcel(file);
         return ResponseEntity.ok("Importación completada");
     }
 }

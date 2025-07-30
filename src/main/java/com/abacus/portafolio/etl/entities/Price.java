@@ -1,4 +1,4 @@
-package com.abacus.portafolio.etl.model;
+package com.abacus.portafolio.etl.entities;
 
 
 import jakarta.persistence.Entity;

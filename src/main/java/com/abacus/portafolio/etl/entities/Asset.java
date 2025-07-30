@@ -1,4 +1,4 @@
-package com.abacus.portafolio.etl.model;
+package com.abacus.portafolio.etl.entities;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,13 +11,13 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Portfolio {
+public class Asset {
     @Id
     @GeneratedValue
     private Long id;
     private String name;
 
-    public Portfolio(String name) {
+    public Asset(String name) {
         this.name = name;
     }
 }

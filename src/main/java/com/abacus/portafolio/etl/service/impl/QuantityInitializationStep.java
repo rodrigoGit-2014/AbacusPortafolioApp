@@ -1,0 +1,66 @@
+package com.abacus.portafolio.etl.service.impl;
+
+import com.abacus.portafolio.etl.config.InitialPortfolioValuesConfig;
+import com.abacus.portafolio.etl.entities.Asset;
+import com.abacus.portafolio.etl.entities.AssetQuantity;
+import com.abacus.portafolio.etl.entities.Portfolio;
+import com.abacus.portafolio.etl.entities.Price;
+import com.abacus.portafolio.etl.model.EtlContext;
+import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
+import com.abacus.portafolio.etl.repository.InitialWeightRepository;
+import com.abacus.portafolio.etl.repository.PortfolioRepository;
+import com.abacus.portafolio.etl.repository.PriceRepository;
+import com.abacus.portafolio.etl.service.ExtractFileService;
+import com.abacus.portafolio.etl.service.FileExtractionStep;
+import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+
+@Service
+@RequiredArgsConstructor
+@Order(2)
+public class QuantityInitializationStep implements FileExtractionStep {
+    private final PriceRepository priceRepository;
+    private final PortfolioRepository portfolioRepository;
+    private final InitialPortfolioValuesConfig initialPortfolioValuesConfig;
+    private final InitialWeightRepository initialWeightRepository;
+    private final AssetQuantityRepository assetQuantityRepository;
+
+    @Override
+    public void execute(EtlContext context) {
+        Price firstPrice = priceRepository.findFirstByOrderByDateAsc();
+        LocalDate initialDate = firstPrice.getDate();
+        portfolioRepository.findAll().forEach(portfolio -> {
+            BigDecimal initialValue = initialPortfolioValuesConfig.findValue(portfolio.getName());
+            initializeQuantities(portfolio, initialValue.doubleValue(), initialDate);
+        });
+    }
+
+    @Transactional
+    public void initializeQuantities(Portfolio portfolio, double initialValue, LocalDate initialDate) {
+        initialWeightRepository.findByPortfolio(portfolio)
+                .forEach(weight -> {
+                    Asset asset = weight.getAsset();
+                    BigDecimal priceAmount = findPriceAmount(asset, initialDate);
+                    BigDecimal quantity = BigDecimal.valueOf(weight.getWeight().doubleValue() * initialValue)
+                            .divide(priceAmount, RoundingMode.HALF_UP);
+                    assetQuantityRepository.save(AssetQuantity.builder()
+                            .asset(asset)
+                            .portfolio(portfolio)
+                            .amount(quantity)
+                            .build());
+                });
+    }
+
+    private BigDecimal findPriceAmount(Asset asset, LocalDate initialDate) {
+        return priceRepository.findByAssetAndDate(asset, initialDate)
+                .map(Price::getPriceAmount)
+                .orElseThrow(() -> new RuntimeException("Price not found for " +
+                        asset.getName() + " on " + initialDate));
+    }
+}

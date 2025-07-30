@@ -1,16 +1,22 @@
-package com.abacus.portafolio.etl.model;
+package com.abacus.portafolio.etl.entities;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Entity
 @Data
-public class AssetQuantity {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class InitialWeight {
     @Id
     @GeneratedValue
     private Long id;
@@ -21,5 +27,5 @@ public class AssetQuantity {
     @ManyToOne
     private Portfolio portfolio;
 
-    private BigDecimal amount; // c_{i,t}, initially c_{i,0}
+    private BigDecimal weight;
 }
