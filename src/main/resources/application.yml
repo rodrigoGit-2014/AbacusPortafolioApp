@@ -9,7 +9,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -23,9 +23,13 @@ server:
   port: 8080
 
 
-initial-values:
-  portfolios:
-    - name: "portafolio 1"
-      value: 1000.0
-    - name: "portafolio 2"
-      value: 2000.0
+app:
+  scale: 3
+  initial-investments:
+    portfolios:
+      - name: "portafolio 1"
+        amount: 1000000000
+      - name: "portafolio 2"
+        amount: 1000000000
+
+

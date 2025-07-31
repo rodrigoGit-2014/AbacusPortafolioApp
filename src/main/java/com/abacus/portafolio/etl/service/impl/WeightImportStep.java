@@ -1,7 +1,7 @@
 package com.abacus.portafolio.etl.service.impl;
 
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.InitialWeight;
+import com.abacus.portafolio.etl.entities.CurrentWeight;
 import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.model.EtlContext;
 import com.abacus.portafolio.etl.repository.AssetRepository;
@@ -52,7 +52,7 @@ public class WeightImportStep implements FileExtractionStep {
 
                 Asset asset = findOrCreateAsset(assetName);
 
-                InitialWeight weight = InitialWeight.builder()
+                CurrentWeight weight = CurrentWeight.builder()
                         .asset(asset)
                         .portfolio(portfolio)
                         .weight(weightValue)

@@ -1,16 +1,15 @@
 package com.abacus.portafolio.etl.service.impl;
 
-import com.abacus.portafolio.etl.config.InitialPortfolioValuesConfig;
+import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.AssetQuantity;
+import com.abacus.portafolio.etl.entities.AssetInvestment;
 import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.entities.Price;
 import com.abacus.portafolio.etl.model.EtlContext;
-import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
+import com.abacus.portafolio.etl.repository.AssetInvestmentRepository;
 import com.abacus.portafolio.etl.repository.InitialWeightRepository;
 import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.etl.repository.PriceRepository;
-import com.abacus.portafolio.etl.service.ExtractFileService;
 import com.abacus.portafolio.etl.service.FileExtractionStep;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
@@ -27,29 +26,30 @@ import java.time.LocalDate;
 public class QuantityInitializationStep implements FileExtractionStep {
     private final PriceRepository priceRepository;
     private final PortfolioRepository portfolioRepository;
-    private final InitialPortfolioValuesConfig initialPortfolioValuesConfig;
+    private final AppConfig appConfig;
     private final InitialWeightRepository initialWeightRepository;
-    private final AssetQuantityRepository assetQuantityRepository;
+    private final AssetInvestmentRepository assetInvestmentRepository;
 
     @Override
     public void execute(EtlContext context) {
         Price firstPrice = priceRepository.findFirstByOrderByDateAsc();
         LocalDate initialDate = firstPrice.getDate();
         portfolioRepository.findAll().forEach(portfolio -> {
-            BigDecimal initialValue = initialPortfolioValuesConfig.findValue(portfolio.getName());
-            initializeQuantities(portfolio, initialValue.doubleValue(), initialDate);
+            BigDecimal initialValue = appConfig.findInitialInvestmentAmount(portfolio.getName());
+            int scale = appConfig.getScale();
+            initializeQuantities(portfolio, initialValue.doubleValue(), scale, initialDate);
         });
     }
 
     @Transactional
-    public void initializeQuantities(Portfolio portfolio, double initialValue, LocalDate initialDate) {
+    public void initializeQuantities(Portfolio portfolio, double initialValue, int scale, LocalDate initialDate) {
         initialWeightRepository.findByPortfolio(portfolio)
                 .forEach(weight -> {
                     Asset asset = weight.getAsset();
                     BigDecimal priceAmount = findPriceAmount(asset, initialDate);
                     BigDecimal quantity = BigDecimal.valueOf(weight.getWeight().doubleValue() * initialValue)
-                            .divide(priceAmount, RoundingMode.HALF_UP);
-                    assetQuantityRepository.save(AssetQuantity.builder()
+                            .divide(priceAmount, scale, RoundingMode.HALF_UP);
+                    assetInvestmentRepository.save(AssetInvestment.builder()
                             .asset(asset)
                             .portfolio(portfolio)
                             .amount(quantity)

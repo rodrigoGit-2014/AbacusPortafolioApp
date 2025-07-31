@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class InitialWeight {
+public class AssetInvestment {
     @Id
     @GeneratedValue
     private Long id;
@@ -27,5 +27,5 @@ public class InitialWeight {
     @ManyToOne
     private Portfolio portfolio;
 
-    private BigDecimal weight;
+    private BigDecimal amount; // c_{i,t}, initially c_{i,0}
 }
