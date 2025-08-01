@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 @Component
 @Order(1)
-public class AssetAmountCalculator implements IEvolutionCalculatorStep {
+public class AssetValueCalculatorStep implements IEvolutionCalculatorStep {
     @Override
     public void apply(EvolutionCalculatorContext context) {
 
@@ -25,13 +25,13 @@ public class AssetAmountCalculator implements IEvolutionCalculatorStep {
                 .filter(q -> pricesByAsset.containsKey(q.getAsset()))
                 .collect(Collectors.toMap(
                         AssetQuantity::getAsset,
-                        q -> calculateInvestment(q, pricesByAsset)
+                        q -> calculateAssetValue(q, pricesByAsset)
                 ));
 
-        context.setAssetInvestmentMap(investmentByAsset);
+        context.setAssetsValueMap(investmentByAsset);
     }
 
-    private BigDecimal calculateInvestment(AssetQuantity quantity, Map<Asset, BigDecimal> pricesByAsset) {
+    private BigDecimal calculateAssetValue(AssetQuantity quantity, Map<Asset, BigDecimal> pricesByAsset) {
         return quantity.getQuantity().multiply(pricesByAsset.get(quantity.getAsset()));
     }
 }

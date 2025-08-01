@@ -25,7 +25,7 @@ public class WeightsCalculationStep implements IEvolutionCalculatorStep {
     public void apply(EvolutionCalculatorContext context) {
 
         BigDecimal totalInvestment = context.getTotalAsset();
-        Map<Asset, BigDecimal> investmentByAsset = context.getAssetInvestmentMap();
+        Map<Asset, BigDecimal> investmentByAsset = context.getAssetsValueMap();
 
         if (isZero(totalInvestment)) {
             context.setWeightByAsset(List.of());

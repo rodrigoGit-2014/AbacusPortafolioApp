@@ -15,12 +15,12 @@ import java.util.Map;
 @Component
 @Order(2)
 @RequiredArgsConstructor
-public class PortfolioValueStep implements IEvolutionCalculatorStep {
+public class PortfolioTotalCalculatorStep implements IEvolutionCalculatorStep {
     private final AppConfig config;
 
     @Override
     public void apply(EvolutionCalculatorContext context) {
-        Map<Asset, BigDecimal> investmentByAsset = context.getAssetInvestmentMap();
+        Map<Asset, BigDecimal> investmentByAsset = context.getAssetsValueMap();
         BigDecimal totalPortfolioValue = calculateTotalInvestment(investmentByAsset);
         context.setTotalAsset(totalPortfolioValue);
     }

@@ -20,7 +20,7 @@ public class EvolutionCalculatorContext {
     public List<AssetQuantity> assetQuantities;
     private Map<Asset, BigDecimal> assetPriceMap;
     private PortfolioEvolutionDTO portfolioEvolutionDTO;
-    private Map<Asset, BigDecimal> assetInvestmentMap;
+    private Map<Asset, BigDecimal> assetsValueMap;
     private BigDecimal totalAsset;
     private List<WeightByAssetDTO> weightByAsset;
 
