@@ -5,6 +5,7 @@ import com.abacus.portafolio.etl.repository.PriceRepository;
 import com.abacus.portafolio.evolution.model.EvolutionRetrieverContext;
 import com.abacus.portafolio.evolution.service.IEvolutionRetriever;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Order(1)
 public class PriceRetrieverImpl implements IEvolutionRetriever {
     private final PriceRepository priceRepository;
 

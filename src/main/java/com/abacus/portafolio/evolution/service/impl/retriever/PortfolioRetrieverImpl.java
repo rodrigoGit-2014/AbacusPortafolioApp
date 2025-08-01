@@ -5,10 +5,12 @@ import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.evolution.model.EvolutionRetrieverContext;
 import com.abacus.portafolio.evolution.service.IEvolutionRetriever;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Order(0)
 public class PortfolioRetrieverImpl implements IEvolutionRetriever {
     private final PortfolioRepository portfolioRepository;
 

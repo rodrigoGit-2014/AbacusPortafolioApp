@@ -17,13 +17,21 @@ import java.util.stream.Collectors;
 public class AssetAmountCalculator implements IEvolutionCalculatorStep {
     @Override
     public void apply(EvolutionCalculatorContext context) {
-        List<AssetQuantity> quantities = context.getQuantities();
-        Map<Asset, BigDecimal> prices = context.getMapPricesByAsset();
-        context.setAssetByAmount(quantities.stream()
-                .filter(q -> prices.containsKey(q.getAsset()))
+
+        Map<Asset, BigDecimal> pricesByAsset = context.getAssetPriceMap();
+        List<AssetQuantity> assetQuantities = context.getQuantities();
+
+        Map<Asset, BigDecimal> investmentByAsset = assetQuantities.stream()
+                .filter(q -> pricesByAsset.containsKey(q.getAsset()))
                 .collect(Collectors.toMap(
                         AssetQuantity::getAsset,
-                        q -> q.getQuantity().multiply(prices.get(q.getAsset()))
-                )));
+                        q -> calculateInvestment(q, pricesByAsset)
+                ));
+
+        context.setAssetInvestmentMap(investmentByAsset);
+    }
+
+    private BigDecimal calculateInvestment(AssetQuantity quantity, Map<Asset, BigDecimal> pricesByAsset) {
+        return quantity.getQuantity().multiply(pricesByAsset.get(quantity.getAsset()));
     }
 }

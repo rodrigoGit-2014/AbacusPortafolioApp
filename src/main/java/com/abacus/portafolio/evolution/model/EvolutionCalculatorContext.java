@@ -18,9 +18,9 @@ import java.util.Map;
 public class EvolutionCalculatorContext {
     private Map<LocalDate, List<Price>> pricesByDate;
     public List<AssetQuantity> assetQuantities;
-    private Map<Asset, BigDecimal> mapPricesByAsset;
+    private Map<Asset, BigDecimal> assetPriceMap;
     private PortfolioEvolutionDTO portfolioEvolutionDTO;
-    private Map<Asset, BigDecimal> assetByAmount;
+    private Map<Asset, BigDecimal> assetInvestmentMap;
     private BigDecimal totalAsset;
     private List<WeightByAssetDTO> weightByAsset;
 
