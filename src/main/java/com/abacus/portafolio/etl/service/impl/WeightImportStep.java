@@ -1,5 +1,6 @@
 package com.abacus.portafolio.etl.service.impl;
 
+import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
 import com.abacus.portafolio.etl.entities.CurrentWeight;
 import com.abacus.portafolio.etl.entities.Portfolio;

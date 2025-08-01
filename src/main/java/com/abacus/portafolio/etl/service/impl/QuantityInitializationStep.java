@@ -2,11 +2,11 @@ package com.abacus.portafolio.etl.service.impl;
 
 import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.AssetInvestment;
+import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.entities.Price;
 import com.abacus.portafolio.etl.model.EtlContext;
-import com.abacus.portafolio.etl.repository.AssetInvestmentRepository;
+import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
 import com.abacus.portafolio.etl.repository.InitialWeightRepository;
 import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.etl.repository.PriceRepository;
@@ -28,7 +28,7 @@ public class QuantityInitializationStep implements FileExtractionStep {
     private final PortfolioRepository portfolioRepository;
     private final AppConfig appConfig;
     private final InitialWeightRepository initialWeightRepository;
-    private final AssetInvestmentRepository assetInvestmentRepository;
+    private final AssetQuantityRepository assetQuantityRepository;
 
     @Override
     public void execute(EtlContext context) {
@@ -49,10 +49,10 @@ public class QuantityInitializationStep implements FileExtractionStep {
                     BigDecimal priceAmount = findPriceAmount(asset, initialDate);
                     BigDecimal quantity = BigDecimal.valueOf(weight.getWeight().doubleValue() * initialValue)
                             .divide(priceAmount, scale, RoundingMode.HALF_UP);
-                    assetInvestmentRepository.save(AssetInvestment.builder()
+                    assetQuantityRepository.save(AssetQuantity.builder()
                             .asset(asset)
                             .portfolio(portfolio)
-                            .amount(quantity)
+                            .quantity(quantity)
                             .build());
                 });
     }

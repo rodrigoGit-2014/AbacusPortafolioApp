@@ -2,10 +2,10 @@ package com.abacus.portafolio.evolution.service;
 
 import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.AssetInvestment;
+import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.entities.Price;
-import com.abacus.portafolio.etl.repository.AssetInvestmentRepository;
+import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
 import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.etl.repository.PriceRepository;
 import com.abacus.portafolio.evolution.dto.PortfolioEvolutionDTO;
@@ -17,10 +17,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,7 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PortfolioEvolutionService {
     private final PortfolioRepository portfolioRepository;
-    private final AssetInvestmentRepository assetInvestmentRepository;
+    private final AssetQuantityRepository assetQuantityRepository;
     private final AppConfig appConfig;
 
     private final PriceRepository priceRepository;
@@ -36,24 +34,23 @@ public class PortfolioEvolutionService {
     public List<PortfolioEvolutionDTO> calculateEvolution(Long portfolioId, LocalDate startDate, LocalDate endDate) {
         log.info("Calculating evolutions for portfolio {}", portfolioId);
         Portfolio portfolioEntity = findPortfolio(portfolioId);
-        List<AssetInvestment> assetInvestments = findAssetInvestments(portfolioEntity);
-        List<Asset> assets = findAllAssets(assetInvestments);
-        List<Price> prices = findAssetByDateBetween(assets, startDate, endDate);
+        List<AssetQuantity> assetQuantities = findAssetQuantities(portfolioEntity);
+        List<Price> prices = findPricesByDateBetween(startDate, endDate);
         Map<LocalDate, List<Price>> pricesByDate = groupPricesByDate(prices);
-        return buildPortfolioEvolution(pricesByDate, assetInvestments);
+        return buildPortfolioEvolution(pricesByDate, assetQuantities);
 
     }
 
-    public List<PortfolioEvolutionDTO> buildPortfolioEvolution(Map<LocalDate, List<Price>> pricesByDate, List<AssetInvestment> assetInvestments) {
+    public List<PortfolioEvolutionDTO> buildPortfolioEvolution(Map<LocalDate, List<Price>> pricesByDate, List<AssetQuantity> assetQuantities) {
         List<LocalDate> sortedDates = getSortedDates(pricesByDate);
         return sortedDates.stream()
-                .map(currentDate -> buildEvolutionEntryForDate(currentDate, pricesByDate.get(currentDate), assetInvestments))
+                .map(currentDate -> buildEvolutionEntryForDate(currentDate, pricesByDate.get(currentDate), assetQuantities))
                 .toList();
     }
 
-    private PortfolioEvolutionDTO buildEvolutionEntryForDate(LocalDate date, List<Price> pricesInDate, List<AssetInvestment> assetInvestments) {
-        Map<Asset, BigDecimal> priceByAssetMap = mapPricesByAsset(pricesInDate);
-        Map<Asset, BigDecimal> totalAmountByAsset = calculateTotalAmountPerAsset(assetInvestments, priceByAssetMap);
+    private PortfolioEvolutionDTO buildEvolutionEntryForDate(LocalDate date, List<Price> pricesInDate, List<AssetQuantity> assetQuantities) {
+        Map<Asset, BigDecimal> assetPrices = mapPricesByAsset(pricesInDate);
+        Map<Asset, BigDecimal> totalAmountByAsset = calculateTotalAmountPerAsset(assetQuantities, assetPrices);
         BigDecimal portfolioValue = calculateTotalInvestment(totalAmountByAsset);
         List<WeightByAssetDTO> weights = calculateWeightsByAsset(totalAmountByAsset, portfolioValue);
 
@@ -75,12 +72,12 @@ public class PortfolioEvolutionService {
                 .setScale(appConfig.getScale(), RoundingMode.HALF_UP);
     }
 
-    private Map<Asset, BigDecimal> calculateTotalAmountPerAsset(List<AssetInvestment> assetInvestments, Map<Asset, BigDecimal> assetPriceMap) {
-        return assetInvestments.stream()
-                .filter(investment -> assetPriceMap.containsKey(investment.getAsset()))
+    private Map<Asset, BigDecimal> calculateTotalAmountPerAsset(List<AssetQuantity> assetQuantities, Map<Asset, BigDecimal> assetPriceMap) {
+        return assetQuantities.stream()
+                .filter(assetTotal -> assetPriceMap.containsKey(assetTotal.getAsset()))
                 .collect(Collectors.toMap(
-                        AssetInvestment::getAsset,
-                        investment -> investment.getAmount().multiply(assetPriceMap.get(investment.getAsset()))
+                        AssetQuantity::getAsset,
+                        asset -> asset.getQuantity().multiply(assetPriceMap.get(asset.getAsset()))
                 ));
     }
 
@@ -89,13 +86,13 @@ public class PortfolioEvolutionService {
                 .orElseThrow(() -> new RuntimeException("Portafolio no encontrado"));
     }
 
-    private List<AssetInvestment> findAssetInvestments(Portfolio entity) {
-        return assetInvestmentRepository.findByPortfolio(entity);
+    private List<AssetQuantity> findAssetQuantities(Portfolio entity) {
+        return assetQuantityRepository.findByPortfolio(entity);
     }
 
-    private List<Asset> findAllAssets(List<AssetInvestment> assetQuantities) {
+    private List<Asset> findAllAssets(List<AssetQuantity> assetQuantities) {
         return assetQuantities.stream()
-                .map(AssetInvestment::getAsset)
+                .map(AssetQuantity::getAsset)
                 .distinct()
                 .toList();
     }
@@ -106,8 +103,8 @@ public class PortfolioEvolutionService {
                 .toList();
     }
 
-    private List<Price> findAssetByDateBetween(List<Asset> assets, LocalDate startDate, LocalDate endDate) {
-        return priceRepository.findByAssetInAndDateBetween(assets, startDate, endDate);
+    private List<Price> findPricesByDateBetween(LocalDate startDate, LocalDate endDate) {
+        return priceRepository.findByDateBetween(startDate, endDate);
     }
 
 

@@ -2,10 +2,10 @@ package com.abacus.portafolio.operation.service;
 
 import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.AssetInvestment;
+import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.entities.Price;
-import com.abacus.portafolio.etl.repository.AssetInvestmentRepository;
+import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
 import com.abacus.portafolio.etl.repository.AssetRepository;
 import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.etl.repository.PriceRepository;
@@ -23,7 +23,7 @@ import java.math.RoundingMode;
 public class PortfolioOperationService {
     private final AssetRepository assetRepository;
     private final PriceRepository priceRepository;
-    private final AssetInvestmentRepository assetInvestmentRepository;
+    private final AssetQuantityRepository assetQuantityRepository;
     private final PortfolioRepository portfolioRepository;
     private final AppConfig appConfig;
 
@@ -41,19 +41,19 @@ public class PortfolioOperationService {
         BigDecimal unitsToSell = priceSeller.getPriceAmount().divide(request.getSeller().getAmount(), appConfig.getScale(), RoundingMode.HALF_UP);
         BigDecimal unitsToBuy = priceBuyer.getPriceAmount().divide(request.getBuyer().getAmount(), appConfig.getScale(), RoundingMode.HALF_UP);
 
-        AssetInvestment assetInvestmentSeller = assetInvestmentRepository.findByPortfolioAndAsset(portfolio, assetSeller)
+        AssetQuantity assetQuantitySeller = assetQuantityRepository.findByPortfolioAndAsset(portfolio, assetSeller)
                 .orElseThrow(() -> new RuntimeException("Asset Investment not found"));
 
-        AssetInvestment assetInvestmentBuyer = assetInvestmentRepository.findByPortfolioAndAsset(portfolio, assetBuyer)
+        AssetQuantity assetQuantityBuyer = assetQuantityRepository.findByPortfolioAndAsset(portfolio, assetBuyer)
                 .orElseThrow(() -> new RuntimeException("Asset Investment not found"));
 
-        assetInvestmentSeller.setAmount(assetInvestmentSeller.getAmount().subtract(unitsToSell));
-        assetInvestmentBuyer.setAmount(assetInvestmentBuyer.getAmount().subtract(unitsToBuy));
+        assetQuantitySeller.setQuantity(assetQuantitySeller.getQuantity().subtract(unitsToSell));
+        assetQuantityBuyer.setQuantity(assetQuantityBuyer.getQuantity().subtract(unitsToBuy));
 
-        log.info("The new unit investment for Seller is", assetInvestmentSeller.getAmount());
-        log.info("The new unit investment for Buyer is", assetInvestmentBuyer.getAmount());
+        log.info("The new unit investment for Seller is", assetQuantitySeller.getQuantity());
+        log.info("The new unit investment for Buyer is", assetQuantityBuyer.getQuantity());
 
-        assetInvestmentRepository.save(assetInvestmentSeller);
-        assetInvestmentRepository.save(assetInvestmentBuyer);
+        assetQuantityRepository.save(assetQuantitySeller);
+        assetQuantityRepository.save(assetQuantityBuyer);
     }
 }

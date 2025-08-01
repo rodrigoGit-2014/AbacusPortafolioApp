@@ -13,6 +13,6 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
 
     Optional<Price> findByAssetAndDate(Asset asset, LocalDate date);
     Price findFirstByOrderByDateAsc();
-    List<Price> findByAssetInAndDateBetween(Collection<Asset> assets, LocalDate dateAfter, LocalDate dateBefore);
+    List<Price> findByDateBetween(LocalDate dateAfter, LocalDate dateBefore);
 
 }
