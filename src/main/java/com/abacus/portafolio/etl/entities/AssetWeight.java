@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CurrentWeight {
+public class AssetWeight {
     @Id
     @GeneratedValue
     private Long id;

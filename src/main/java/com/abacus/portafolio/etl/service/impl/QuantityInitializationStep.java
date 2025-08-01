@@ -7,7 +7,7 @@ import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.entities.Price;
 import com.abacus.portafolio.etl.model.EtlContext;
 import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
-import com.abacus.portafolio.etl.repository.InitialWeightRepository;
+import com.abacus.portafolio.etl.repository.AssetWeightRepository;
 import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.etl.repository.PriceRepository;
 import com.abacus.portafolio.etl.service.FileExtractionStep;
@@ -27,7 +27,7 @@ public class QuantityInitializationStep implements FileExtractionStep {
     private final PriceRepository priceRepository;
     private final PortfolioRepository portfolioRepository;
     private final AppConfig appConfig;
-    private final InitialWeightRepository initialWeightRepository;
+    private final AssetWeightRepository assetWeightRepository;
     private final AssetQuantityRepository assetQuantityRepository;
 
     @Override
@@ -43,7 +43,7 @@ public class QuantityInitializationStep implements FileExtractionStep {
 
     @Transactional
     public void initializeQuantities(Portfolio portfolio, double initialValue, int scale, LocalDate initialDate) {
-        initialWeightRepository.findByPortfolio(portfolio)
+        assetWeightRepository.findByPortfolio(portfolio)
                 .forEach(weight -> {
                     Asset asset = weight.getAsset();
                     BigDecimal priceAmount = findPriceAmount(asset, initialDate);

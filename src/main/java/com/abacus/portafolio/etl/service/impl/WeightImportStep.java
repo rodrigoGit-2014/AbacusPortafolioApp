@@ -1,12 +1,11 @@
 package com.abacus.portafolio.etl.service.impl;
 
-import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.CurrentWeight;
+import com.abacus.portafolio.etl.entities.AssetWeight;
 import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.model.EtlContext;
 import com.abacus.portafolio.etl.repository.AssetRepository;
-import com.abacus.portafolio.etl.repository.InitialWeightRepository;
+import com.abacus.portafolio.etl.repository.AssetWeightRepository;
 import com.abacus.portafolio.etl.repository.PortfolioRepository;
 import com.abacus.portafolio.etl.service.FileExtractionStep;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,7 @@ public class WeightImportStep implements FileExtractionStep {
 
     private final AssetRepository assetRepository;
     private final PortfolioRepository portfolioRepository;
-    private final InitialWeightRepository initialWeightRepository;
+    private final AssetWeightRepository assetWeightRepository;
 
     @Override
     public void execute(EtlContext context) {
@@ -53,13 +52,13 @@ public class WeightImportStep implements FileExtractionStep {
 
                 Asset asset = findOrCreateAsset(assetName);
 
-                CurrentWeight weight = CurrentWeight.builder()
+                AssetWeight weight = AssetWeight.builder()
                         .asset(asset)
                         .portfolio(portfolio)
                         .weight(weightValue)
                         .build();
 
-                initialWeightRepository.save(weight);
+                assetWeightRepository.save(weight);
             }
         }
     }
