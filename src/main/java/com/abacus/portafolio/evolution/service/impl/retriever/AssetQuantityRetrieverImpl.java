@@ -18,7 +18,11 @@ public class AssetQuantityRetrieverImpl implements IEvolutionRetriever {
 
     @Override
     public void update(EvolutionRetrieverContext context) {
-        List<AssetQuantity> quantities = assetQuantityRepository.findByPortfolio(context.getPortfolio());
+        List<AssetQuantity> quantities = assetQuantityRepository
+                .findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(
+                        context.getPortfolio().getId(),
+                        context.getCurrentDate(),
+                        context.getCurrentDate());
         context.setAssetQuantities(quantities);
     }
 }

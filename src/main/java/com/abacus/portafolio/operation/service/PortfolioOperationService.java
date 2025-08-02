@@ -34,7 +34,6 @@ public class PortfolioOperationService {
 
     public void process(Long portfolioId, PortfolioOperationDTO request) {
         List<Asset> assets = assetRepository.findAll();
-        portfolioValueCalculator.calculate(portfolioId, request.getDay(), assets);
 
         Portfolio portfolio = portfolioRepository.findById(portfolioId).orElse(null);
         Asset assetSeller = assetRepository.findByNameIgnoreCase(request.getSeller().getAsset()).orElseThrow(() -> new RuntimeException("Asset not found"));
@@ -51,6 +50,9 @@ public class PortfolioOperationService {
 
         registerOperation(assetSeller, portfolio, request.getDay(), unitsToSell.multiply(BigDecimal.valueOf(-1)));
         registerOperation(assetBuyer, portfolio, request.getDay(), unitsToBuy);
+
+        BigDecimal totalPortfolio =  portfolioValueCalculator.calculate(portfolioId, request.getDay(), assets);
+
 
     }
 

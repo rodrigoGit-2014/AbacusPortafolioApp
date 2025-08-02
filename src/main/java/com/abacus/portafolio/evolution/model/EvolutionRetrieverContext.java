@@ -19,6 +19,7 @@ public class EvolutionRetrieverContext {
     private Long portfolioId;
     private LocalDate startDate;
     private LocalDate endDate;
+    private LocalDate currentDate;
 
     private Portfolio portfolio;
     private List<AssetQuantity> assetQuantities;
