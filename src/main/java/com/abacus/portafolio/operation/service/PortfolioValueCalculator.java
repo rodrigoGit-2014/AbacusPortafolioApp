@@ -17,19 +17,46 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class PortfolioValueCalculator {
+
     private final AssetQuantityRepository assetQuantityRepository;
     private final PriceRepository priceRepository;
 
     public BigDecimal calculate(Long portfolioId, LocalDate date, List<Asset> assets) {
-        List<AssetQuantity> quantities = assetQuantityRepository
-                .findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(portfolioId, date, date);
-        List<Price> prices = priceRepository.findByDateBetween(date, date);
-        Map<Asset,  List<AssetQuantity>> grouped = quantities.stream().collect(Collectors.groupingBy(AssetQuantity::getAsset));
-        Map<Asset, List<Price>> priceMap = prices.stream().collect(Collectors.groupingBy(Price::getAsset));
-        BigDecimal total = BigDecimal.ZERO;
-        for(Asset asset : assets) {
-            total = total.add(grouped.get(asset).getLast().getQuantity().multiply(priceMap.get(asset).getFirst().getPriceAmount()));
+        Map<Asset, AssetQuantity> quantitiesByAsset = loadLatestQuantitiesByAsset(portfolioId, date);
+        Map<Asset, Price> pricesByAsset = loadPricesByAsset(date);
+
+        return assets.stream()
+                .map(asset -> calculateAssetValue(asset, quantitiesByAsset, pricesByAsset))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private Map<Asset, AssetQuantity> loadLatestQuantitiesByAsset(Long portfolioId, LocalDate date) {
+        return assetQuantityRepository
+                .findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(portfolioId, date, date)
+                .stream()
+                .collect(Collectors.toMap(
+                        AssetQuantity::getAsset,
+                        aq -> aq, // assuming one record per asset is valid on that date
+                        (existing, replacement) -> replacement // if duplicated, keep latest
+                ));
+    }
+
+    private Map<Asset, Price> loadPricesByAsset(LocalDate date) {
+        return priceRepository.findByDateBetween(date, date).stream()
+                .collect(Collectors.toMap(
+                        Price::getAsset,
+                        price -> price // assuming only one price per asset per day
+                ));
+    }
+
+    private BigDecimal calculateAssetValue(Asset asset, Map<Asset, AssetQuantity> quantities, Map<Asset, Price> prices) {
+        AssetQuantity quantity = quantities.get(asset);
+        Price price = prices.get(asset);
+
+        if (quantity == null || price == null) {
+            throw new IllegalStateException("Missing data for asset: " + asset.getName());
         }
-        return total;
+
+        return quantity.getQuantity().multiply(price.getPriceAmount());
     }
 }
