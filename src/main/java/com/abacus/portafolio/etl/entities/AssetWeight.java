@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Data
@@ -20,12 +21,11 @@ public class AssetWeight {
     @Id
     @GeneratedValue
     private Long id;
-
     @ManyToOne
     private Asset asset;
-
     @ManyToOne
     private Portfolio portfolio;
-
     private BigDecimal weight;
+    private LocalDate validFrom;
+    private LocalDate validTo;
 }

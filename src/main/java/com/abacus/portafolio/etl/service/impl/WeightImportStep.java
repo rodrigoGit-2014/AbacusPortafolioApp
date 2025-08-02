@@ -17,6 +17,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,9 @@ public class WeightImportStep implements FileExtractionStep {
 
         Row header = sheet.getRow(0);
         int totalPortfolios = header.getLastCellNum() - 2;
+        Row secondRow = sheet.getRow(1);
+        Cell dateCell = secondRow.getCell(0);
+
 
         for (int portfolioIndex = 0; portfolioIndex < totalPortfolios; portfolioIndex++) {
             String portfolioName = getCellValueAsString(header.getCell(2 + portfolioIndex));
@@ -56,12 +61,15 @@ public class WeightImportStep implements FileExtractionStep {
                         .asset(asset)
                         .portfolio(portfolio)
                         .weight(weightValue)
+                        .validFrom(dateCell.getLocalDateTimeCellValue().toLocalDate())
+                        .validTo(LocalDate.of(9999, 12, 31))
                         .build();
 
                 assetWeightRepository.save(weight);
             }
         }
     }
+
     private String getCellValueAsString(Cell cell) {
         return cell != null ? cell.getStringCellValue().trim() : "";
     }
