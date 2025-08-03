@@ -9,6 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,5 +25,11 @@ public class AssetQuantityRetrieverImpl implements IEvolutionRetriever {
                         context.getCurrentDate(),
                         context.getCurrentDate());
         context.setAssetQuantities(quantities);
+        context.setQuantitiesByAsset(quantities.stream()
+                .collect(Collectors.toMap(
+                        AssetQuantity::getAsset,
+                        aq -> aq,
+                        (existing, replacement) -> replacement
+                )));
     }
 }

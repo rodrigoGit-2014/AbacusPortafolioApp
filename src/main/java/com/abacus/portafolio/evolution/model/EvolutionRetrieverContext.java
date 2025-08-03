@@ -32,4 +32,6 @@ public class EvolutionRetrieverContext {
     private BigDecimal portfolioValue;
     private List<WeightByAssetDTO> weights;
 
+    private Map<Asset, AssetQuantity> quantitiesByAsset;
+    private Map<Asset, Price> priceByAsset;
 }
