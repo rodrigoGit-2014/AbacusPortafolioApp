@@ -15,7 +15,7 @@ import java.util.Map;
 @Data
 public class EvolutionUpdaterContext {
     private long portfolioId;
-    private LocalDate operationDate;
+    private LocalDate operationDay;
     private Map<Asset, Price> priceByAsset;
     private Map<Asset, AssetQuantity> quantitiesByAsset;
     private BigDecimal portfolioValue;

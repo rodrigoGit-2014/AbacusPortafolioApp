@@ -1,6 +1,7 @@
 package com.abacus.portafolio.evolution.service.impl.updater;
 
 import com.abacus.portafolio.etl.config.AppConfig;
+import com.abacus.portafolio.etl.entities.Asset;
 import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.entities.AssetWeight;
 import com.abacus.portafolio.etl.entities.Price;
@@ -19,39 +20,55 @@ import java.util.List;
 public class WeightsUpdaterCalculator implements IEvolutionUpdater {
     private final AssetWeightRepository assetWeightRepository;
     private final AppConfig appConfig;
+    private static final LocalDate MAX_VALID_TO = LocalDate.of(9999, 1, 1);
 
     @Override
     public void update(EvolutionUpdaterContext context) {
-        List<AssetWeight> history = assetWeightRepository.findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(context.getPortfolioId(),
-                context.getOperationDate(), context.getOperationDate());
-        for (AssetWeight assetWeight : history) {
-            Price price = context.getPriceByAsset().get(assetWeight.getAsset());
-            AssetQuantity quantity = context.getQuantitiesByAsset().get(assetWeight.getAsset());
-            registerAssetWeightOperation(context.getOperationDate(), price, assetWeight, context.getPortfolioValue(), quantity);
+        List<AssetWeight> currentWeights = findValidWeightsForDate(context);
+
+        for (AssetWeight oldWeight : currentWeights) {
+            Asset asset = oldWeight.getAsset();
+            Price price = context.getPriceByAsset().get(asset);
+            AssetQuantity quantity = context.getQuantitiesByAsset().get(asset);
+
+            validateInputs(asset, price, quantity);
+
+            closeOldWeightRecord(oldWeight, context.getOperationDay());
+            createAndSaveNewWeightRecord(oldWeight, price, quantity, context);
         }
     }
 
-    public void registerAssetWeightOperation(LocalDate operationDate, Price price, AssetWeight current, BigDecimal totalPortfolio, AssetQuantity quantity) {
-        LocalDate updateValidTo = LocalDate.of(9999, 1, 1);
-        if (!current.getValidTo().isEqual(updateValidTo)) {
-            updateValidTo = current.getValidTo();
+    private List<AssetWeight> findValidWeightsForDate(EvolutionUpdaterContext context) {
+        return assetWeightRepository.findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(
+                context.getPortfolioId(),
+                context.getOperationDay(),
+                context.getOperationDay()
+        );
+    }
+
+    private void validateInputs(Asset asset, Price price, AssetQuantity quantity) {
+        if (price == null || quantity == null) {
+            throw new IllegalArgumentException("Missing price or quantity for asset: " + asset.getName());
         }
+    }
 
-        // 1. Cerrar el rango anterior
-        current.setValidTo(operationDate.minusDays(1));
-        assetWeightRepository.save(current);
+    private void closeOldWeightRecord(AssetWeight oldWeight, LocalDate operationDate) {
+        oldWeight.setValidTo(operationDate.minusDays(1));
+        assetWeightRepository.save(oldWeight);
+    }
 
-        // 2. Crear nuevo registro modificado
-        AssetWeight updated = new AssetWeight();
+    private void createAndSaveNewWeightRecord(AssetWeight oldWeight, Price price, AssetQuantity quantity, EvolutionUpdaterContext context) {
+        BigDecimal assetValue = quantity.getQuantity().multiply(price.getPriceAmount());
+        BigDecimal weight = assetValue.divide(context.getPortfolioValue(), appConfig.getScale(), BigDecimal.ROUND_HALF_UP);
 
-        updated.setPortfolio(current.getPortfolio());
-        updated.setAsset(current.getAsset());
-        updated.setWeight((quantity.getQuantity().multiply(price.getPriceAmount())).divide(totalPortfolio, appConfig.getScale(), BigDecimal.ROUND_HALF_UP));
-        updated.setValidFrom(operationDate);
-        updated.setValidTo(updateValidTo);
+        AssetWeight newWeight = AssetWeight.builder()
+                .portfolio(oldWeight.getPortfolio())
+                .asset(oldWeight.getAsset())
+                .weight(weight)
+                .validFrom(context.getOperationDay())
+                .validTo(MAX_VALID_TO)
+                .build();
 
-        assetWeightRepository.save(updated);
-
-
+        assetWeightRepository.save(newWeight);
     }
 }
