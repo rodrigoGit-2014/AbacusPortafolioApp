@@ -1,5 +1,6 @@
 package com.abacus.portafolio.operation.service;
 
+import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.*;
 import com.abacus.portafolio.etl.repository.AssetWeightRepository;
 import com.abacus.portafolio.evolution.model.EvolutionRetrieverContext;
@@ -21,6 +22,7 @@ import java.util.Optional;
 public class PortfolioUpdater {
     private final AssetWeightRepository assetWeightRepository;
     private final List<IEvolutionRetriever> retrievers;
+    private final AppConfig appConfig;
 
     public void update(Portfolio portfolio, LocalDate operationDate, List<Asset> assets) {
 
@@ -31,50 +33,39 @@ public class PortfolioUpdater {
                 .build();
 
         retrievers.forEach(r -> r.update(context));
-        BigDecimal totalPortfolio = getTotalPortfolioValue(assets, context.getQuantitiesByAsset(),context.getPriceByAsset());
+        BigDecimal totalPortfolio = getTotalPortfolioValue(assets, context.getQuantitiesByAsset(), context.getPriceByAsset());
 
-        List<AssetWeight> history = assetWeightRepository.findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(portfolio.getId(), operationDate,operationDate);
-
+        List<AssetWeight> history = assetWeightRepository.findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(portfolio.getId(), operationDate, operationDate);
+        for (AssetWeight assetWeight : history) {
+            Price price = context.getPriceByAsset().get(assetWeight.getAsset());
+            registerOperation(operationDate,price,assetWeight,totalPortfolio);
+        }
 
     }
 
 
-    public void registerOperation(Asset asset, Portfolio portfolio, LocalDate operationDate, BigDecimal deltaQuantity) {
+    public void registerOperation( LocalDate operationDate, Price price, AssetWeight current, BigDecimal totalPortfolio) {
         LocalDate updateValidTo = LocalDate.of(9999, 1, 1);
-        List<AssetQuantity> history = assetQuantityRepository.findByPortfolioAndAsset(portfolio, asset);
-        history.sort(Comparator.comparing(AssetQuantity::getValidFrom));
-
-        Optional<AssetQuantity> recordAtDate = history.stream()
-                .filter(r -> !operationDate.isBefore(r.getValidFrom()) && !operationDate.isAfter(r.getValidTo()))
-                .findFirst();
-
-        if (recordAtDate.isPresent()) {
-
-
-            // Caso: operación entre medio → dividir el rango
-            AssetQuantity current = recordAtDate.get();
-
-            if (!current.getValidTo().isEqual(updateValidTo)) {
-                updateValidTo = current.getValidTo();
-            }
-
-            // 1. Cerrar el rango anterior
-            current.setValidTo(operationDate.minusDays(1));
-            assetQuantityRepository.save(current);
-
-            // 2. Crear nuevo registro modificado
-            AssetQuantity updated = new AssetQuantity();
-
-            updated.setPortfolio(portfolio);
-            updated.setAsset(asset);
-            updated.setQuantity(current.getQuantity().add(deltaQuantity));
-            updated.setValidFrom(operationDate);
-            updated.setValidTo(updateValidTo);
-
-            assetQuantityRepository.save(updated);
-
-
+        if (!current.getValidTo().isEqual(updateValidTo)) {
+            updateValidTo = current.getValidTo();
         }
+
+        // 1. Cerrar el rango anterior
+        current.setValidTo(operationDate.minusDays(1));
+        assetWeightRepository.save(current);
+
+        // 2. Crear nuevo registro modificado
+        AssetWeight updated = new AssetWeight();
+
+        updated.setPortfolio(current.getPortfolio());
+        updated.setAsset(current.getAsset());
+        updated.setWeight((current.getWeight().multiply(price.getPriceAmount())).divide(totalPortfolio, appConfig.getScale(), BigDecimal.ROUND_HALF_UP));
+        updated.setValidFrom(operationDate);
+        updated.setValidTo(updateValidTo);
+
+        assetWeightRepository.save(updated);
+
+
     }
 
     private BigDecimal getTotalPortfolioValue(List<Asset> assets, Map<Asset, AssetQuantity> quantities, Map<Asset, Price> prices) {
@@ -83,7 +74,7 @@ public class PortfolioUpdater {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal calculateAssetValue(AssetQuantity quantity,  Price price, String assetName) {
+    private BigDecimal calculateAssetValue(AssetQuantity quantity, Price price, String assetName) {
         if (quantity == null || price == null) {
             throw new IllegalStateException("Missing data for asset: " + assetName);
         }

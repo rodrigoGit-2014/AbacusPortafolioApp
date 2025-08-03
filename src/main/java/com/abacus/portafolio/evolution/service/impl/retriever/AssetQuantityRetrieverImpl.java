@@ -22,8 +22,8 @@ public class AssetQuantityRetrieverImpl implements IEvolutionRetriever {
         List<AssetQuantity> quantities = assetQuantityRepository
                 .findByPortfolioIdAndValidFromLessThanEqualAndValidToGreaterThanEqual(
                         context.getPortfolio().getId(),
-                        context.getCurrentDate(),
-                        context.getCurrentDate());
+                        context.getStartDate(),
+                        context.getEndDate());
         context.setAssetQuantities(quantities);
         context.setQuantitiesByAsset(quantities.stream()
                 .collect(Collectors.toMap(
