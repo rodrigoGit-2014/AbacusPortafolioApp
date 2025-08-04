@@ -4,6 +4,7 @@ import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
 import com.abacus.portafolio.etl.entities.Price;
 import com.abacus.portafolio.etl.repository.AssetRepository;
+import com.abacus.portafolio.evolution.dto.PortfolioEvolutionDTO;
 import com.abacus.portafolio.evolution.model.EvolutionRetrieverContext;
 import com.abacus.portafolio.evolution.model.EvolutionUpdaterContext;
 import com.abacus.portafolio.evolution.service.IEvolutionRetriever;
@@ -11,12 +12,15 @@ import com.abacus.portafolio.evolution.service.IEvolutionUpdater;
 import com.abacus.portafolio.operation.dto.PortfolioOperationDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.utils.Lists;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+
+import static com.abacus.portafolio.evolution.util.EvolutionContextFactory.buildUpdaterContext;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +33,7 @@ public class PortfolioOperationService {
     private final List<IEvolutionUpdater> updaters;
 
 
-    public void process(Long portfolioId, PortfolioOperationDTO request) {
+    public PortfolioEvolutionDTO process(Long portfolioId, PortfolioOperationDTO request) {
 
         EvolutionRetrieverContext context = loadContext(portfolioId, request.getDay());
 
@@ -42,7 +46,10 @@ public class PortfolioOperationService {
         BigDecimal unitsToSell = calculateUnitEquivalence(request.getSeller().getAmount(), priceSeller);
         BigDecimal unitsToBuy = calculateUnitEquivalence(request.getBuyer().getAmount(), priceBuyer);
 
-        updatePortfolio(context, request.getDay(), assetSeller, assetBuyer, unitsToSell, unitsToBuy);
+        EvolutionUpdaterContext updaterContext = buildUpdaterContext(context, request.getDay(), assetSeller, assetBuyer, unitsToSell, unitsToBuy);
+        updatePortfolio(updaterContext);
+
+        return updaterContext.getResponse();
 
     }
 
@@ -54,13 +61,8 @@ public class PortfolioOperationService {
         return assetRepository.findByNameIgnoreCase(request.getAsset()).orElseThrow(() -> new RuntimeException("Asset not found"));
     }
 
-    private void updatePortfolio(EvolutionRetrieverContext erc,
-                                 LocalDate operationDay,
-                                 Asset assetSeller, Asset assetBuyer,
-                                 BigDecimal unitSeller, BigDecimal unitBuyer) {
-        EvolutionUpdaterContext context = buildUpdaterContext(erc, operationDay, assetSeller, assetBuyer, unitSeller, unitBuyer);
+    private void updatePortfolio( EvolutionUpdaterContext context) {
         updaters.forEach(u -> u.update(context));
-
     }
 
     private EvolutionRetrieverContext loadContext(long portfolioId, LocalDate operationDate) {
@@ -74,24 +76,6 @@ public class PortfolioOperationService {
     private EvolutionRetrieverContext applyRetrievers(EvolutionRetrieverContext context) {
         retrievers.forEach(r -> r.update(context));
         return context;
-    }
-
-    private static EvolutionUpdaterContext buildUpdaterContext(EvolutionRetrieverContext erc,
-                                                               LocalDate operationDay,
-                                                               Asset assetSeller,
-                                                               Asset assetBuyer,
-                                                               BigDecimal unitSeller,
-                                                               BigDecimal unitBuyer) {
-        return EvolutionUpdaterContext.builder()
-                .portfolioId(erc.getPortfolioId())
-                .operationDay(operationDay)
-                .priceByAsset(erc.getPriceByAsset())
-                .quantitiesByAsset(erc.getQuantitiesByAsset())
-                .assetSeller(assetSeller)
-                .assetBuyer(assetBuyer)
-                .unitsToSell(unitSeller)
-                .unitsToBuy(unitBuyer)
-                .build();
     }
 
 }

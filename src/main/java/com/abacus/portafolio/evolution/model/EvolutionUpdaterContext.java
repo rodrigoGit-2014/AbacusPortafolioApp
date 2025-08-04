@@ -3,6 +3,7 @@ package com.abacus.portafolio.evolution.model;
 import com.abacus.portafolio.etl.entities.Asset;
 import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.entities.Price;
+import com.abacus.portafolio.evolution.dto.PortfolioEvolutionDTO;
 import lombok.Builder;
 import lombok.Data;
 
@@ -24,4 +25,5 @@ public class EvolutionUpdaterContext {
     private Asset assetBuyer;
     private BigDecimal unitsToSell;
     private BigDecimal unitsToBuy;
+    private PortfolioEvolutionDTO response;
 }

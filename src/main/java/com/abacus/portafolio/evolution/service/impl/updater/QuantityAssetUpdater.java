@@ -1,7 +1,9 @@
 package com.abacus.portafolio.evolution.service.impl.updater;
 
+import com.abacus.portafolio.etl.entities.Asset;
 import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
+import com.abacus.portafolio.evolution.dto.AssetOperationDTO;
 import com.abacus.portafolio.evolution.model.EvolutionUpdaterContext;
 import com.abacus.portafolio.evolution.service.IEvolutionUpdater;
 import lombok.RequiredArgsConstructor;
@@ -20,50 +22,52 @@ public class QuantityAssetUpdater implements IEvolutionUpdater {
 
     @Override
     public void update(EvolutionUpdaterContext context) {
-        updateAssetQuantity(
-                context.getQuantitiesByAsset().get(context.getAssetSeller()),
-                context.getOperationDay(),
-                context.getUnitsToSell().negate()
-        );
-
-        updateAssetQuantity(
-                context.getQuantitiesByAsset().get(context.getAssetBuyer()),
-                context.getOperationDay(),
-                context.getUnitsToBuy()
-        );
+        updateAssetQuantity(context, context.getAssetSeller());
+        updateAssetQuantity(context, context.getAssetBuyer());
     }
 
-    private void updateAssetQuantity(AssetQuantity currentQuantity, LocalDate operationDate, BigDecimal deltaQuantity) {
-        if (currentQuantity == null) {
+    private void updateAssetQuantity(EvolutionUpdaterContext context, Asset asset) {
+        if (asset == null) {
             throw new IllegalArgumentException("AssetQuantity not found for operation.");
         }
 
-        closeCurrentQuantity(currentQuantity, operationDate);
-        openNewQuantity(currentQuantity, operationDate, deltaQuantity);
+        closeCurrentQuantity(context, asset);
+        openNewQuantity(context, asset);
     }
 
-    private void closeCurrentQuantity(AssetQuantity currentQuantity, LocalDate operationDate) {
+    private void closeCurrentQuantity(EvolutionUpdaterContext context, Asset asset) {
+        AssetQuantity currentQuantity = context.getQuantitiesByAsset().get(asset);
         AssetQuantity closedQuantity = AssetQuantity.builder()
                 .id(currentQuantity.getId())
                 .portfolio(currentQuantity.getPortfolio())
                 .asset(currentQuantity.getAsset())
                 .quantity(currentQuantity.getQuantity())
                 .validFrom(currentQuantity.getValidFrom())
-                .validTo(operationDate.minusDays(1))
+                .validTo(context.getOperationDay().minusDays(1))
                 .build();
 
         assetQuantityRepository.save(closedQuantity);
     }
 
-    private void openNewQuantity(AssetQuantity baseQuantity, LocalDate operationDate, BigDecimal deltaQuantity) {
+    private static void buildWeightResponse(EvolutionUpdaterContext context, Asset asset, AssetQuantity closedQuantity) {
+        context.getResponse().getAssetOperations().add(AssetOperationDTO.builder()
+                .assetName(asset.getName())
+                .priceAmount(context.getPriceByAsset().get(asset).getPriceAmount())
+                .assetAmount(closedQuantity.getQuantity())
+                .build());
+    }
+
+    private void openNewQuantity(EvolutionUpdaterContext context, Asset asset) {
+        AssetQuantity currentQuantity = context.getQuantitiesByAsset().get(asset);
         AssetQuantity newQuantity = AssetQuantity.builder()
-                .portfolio(baseQuantity.getPortfolio())
-                .asset(baseQuantity.getAsset())
-                .quantity(baseQuantity.getQuantity().add(deltaQuantity))
-                .validFrom(operationDate)
+                .portfolio(currentQuantity.getPortfolio())
+                .asset(currentQuantity.getAsset())
+                .quantity(currentQuantity.getQuantity().add(context.getUnitsToBuy()))
+                .validFrom(context.getOperationDay())
                 .validTo(MAX_VALID_TO)
                 .build();
 
         assetQuantityRepository.save(newQuantity);
+        buildWeightResponse(context, asset, newQuantity);
     }
 }

@@ -6,6 +6,8 @@ import com.abacus.portafolio.etl.entities.AssetQuantity;
 import com.abacus.portafolio.etl.entities.AssetWeight;
 import com.abacus.portafolio.etl.entities.Price;
 import com.abacus.portafolio.etl.repository.AssetWeightRepository;
+import com.abacus.portafolio.evolution.dto.AssetOperationDTO;
+import com.abacus.portafolio.evolution.dto.WeightByAssetDTO;
 import com.abacus.portafolio.evolution.model.EvolutionUpdaterContext;
 import com.abacus.portafolio.evolution.service.IEvolutionUpdater;
 import lombok.RequiredArgsConstructor;
@@ -70,5 +72,15 @@ public class WeightsUpdaterCalculator implements IEvolutionUpdater {
                 .build();
 
         assetWeightRepository.save(newWeight);
+
+        if (oldWeight.getAsset().getName().equals(context.getAssetSeller().getName())) {
+            List<AssetOperationDTO> weights = context.getResponse().getAssetOperations();
+            weights.get(0).setWeight(weight);
+
+        }
+        if (oldWeight.getAsset().getName().equals(context.getAssetBuyer().getName())) {
+            List<AssetOperationDTO> weights = context.getResponse().getAssetOperations();
+            weights.get(1).setWeight(weight);
+        }
     }
 }

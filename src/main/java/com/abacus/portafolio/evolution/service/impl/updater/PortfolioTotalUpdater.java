@@ -28,6 +28,7 @@ public class PortfolioTotalUpdater implements IEvolutionUpdater {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         context.setPortfolioValue(total);
+        context.getResponse().setPortfolioTotal(total);
     }
 
     private BigDecimal calculateAssetValue(Asset asset, AssetQuantity quantity, Price price) {

@@ -1,5 +1,6 @@
 package com.abacus.portafolio.operation.controller;
 
+import com.abacus.portafolio.evolution.dto.PortfolioEvolutionDTO;
 import com.abacus.portafolio.operation.dto.PortfolioOperationDTO;
 import com.abacus.portafolio.operation.service.PortfolioOperationService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ public class PortfolioOperationController {
 
     @PostMapping("/{portfolioId}/operation")
     public ResponseEntity<?> processOperation(@PathVariable Long portfolioId, @RequestBody PortfolioOperationDTO request) {
-        portfolioOperationService.process(portfolioId, request);
-        return ResponseEntity.ok().build();
+        PortfolioEvolutionDTO response = portfolioOperationService.process(portfolioId, request);
+        return ResponseEntity.ok().body(response);
     }
 }
