@@ -26,6 +26,11 @@ public class PriceRetrieverImpl implements IEvolutionRetriever {
 
         Map<LocalDate, List<Price>> grouped = prices.stream().collect(Collectors.groupingBy(Price::getDate));
         context.setPricesGroupedByDate(grouped);
+        context.setPriceByAsset(prices.stream()
+                .collect(Collectors.toMap(
+                        Price::getAsset,
+                        price -> price
+                )));
 
     }
 

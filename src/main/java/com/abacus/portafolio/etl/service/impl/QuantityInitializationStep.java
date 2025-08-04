@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +54,8 @@ public class QuantityInitializationStep implements FileExtractionStep {
                             .asset(asset)
                             .portfolio(portfolio)
                             .quantity(quantity)
+                            .validFrom(initialDate)
+                            .validTo(LocalDate.of(9999, 12, 31))
                             .build());
                 });
     }

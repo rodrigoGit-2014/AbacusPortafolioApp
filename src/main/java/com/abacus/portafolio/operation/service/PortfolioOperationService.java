@@ -2,58 +2,80 @@ package com.abacus.portafolio.operation.service;
 
 import com.abacus.portafolio.etl.config.AppConfig;
 import com.abacus.portafolio.etl.entities.Asset;
-import com.abacus.portafolio.etl.entities.AssetQuantity;
-import com.abacus.portafolio.etl.entities.Portfolio;
 import com.abacus.portafolio.etl.entities.Price;
-import com.abacus.portafolio.etl.repository.AssetQuantityRepository;
 import com.abacus.portafolio.etl.repository.AssetRepository;
-import com.abacus.portafolio.etl.repository.PortfolioRepository;
-import com.abacus.portafolio.etl.repository.PriceRepository;
+import com.abacus.portafolio.evolution.dto.PortfolioEvolutionDTO;
+import com.abacus.portafolio.evolution.model.EvolutionRetrieverContext;
+import com.abacus.portafolio.evolution.model.EvolutionUpdaterContext;
+import com.abacus.portafolio.evolution.service.IEvolutionRetriever;
+import com.abacus.portafolio.evolution.service.IEvolutionUpdater;
 import com.abacus.portafolio.operation.dto.PortfolioOperationDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.utils.Lists;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.List;
+
+import static com.abacus.portafolio.evolution.util.EvolutionContextFactory.buildUpdaterContext;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PortfolioOperationService {
     private final AssetRepository assetRepository;
-    private final PriceRepository priceRepository;
-    private final AssetQuantityRepository assetQuantityRepository;
-    private final PortfolioRepository portfolioRepository;
+
     private final AppConfig appConfig;
+    private final List<IEvolutionRetriever> retrievers;
+    private final List<IEvolutionUpdater> updaters;
 
-    public void process(Long portfolioId, PortfolioOperationDTO request) {
-        Portfolio portfolio = portfolioRepository.findById(portfolioId).orElse(null);
-        Asset assetSeller = assetRepository.findByNameIgnoreCase(request.getSeller().getAsset()).orElseThrow(() -> new RuntimeException("Asset not found"));
-        Asset assetBuyer = assetRepository.findByNameIgnoreCase(request.getBuyer().getAsset()).orElseThrow(() -> new RuntimeException("Asset not found"));
 
-        Price priceSeller = priceRepository.findByAssetAndDate(assetSeller, request.getDay())
-                .orElseThrow(() -> new RuntimeException("Price not found for asset: " + assetSeller.getName()));
+    public PortfolioEvolutionDTO process(Long portfolioId, PortfolioOperationDTO request) {
 
-        Price priceBuyer = priceRepository.findByAssetAndDate(assetBuyer, request.getDay())
-                .orElseThrow(() -> new RuntimeException("PPrice not found for asset: " + assetBuyer.getName()));
+        EvolutionRetrieverContext context = loadContext(portfolioId, request.getDay());
 
-        BigDecimal unitsToSell = priceSeller.getPriceAmount().divide(request.getSeller().getAmount(), appConfig.getScale(), RoundingMode.HALF_UP);
-        BigDecimal unitsToBuy = priceBuyer.getPriceAmount().divide(request.getBuyer().getAmount(), appConfig.getScale(), RoundingMode.HALF_UP);
+        Asset assetSeller = findAsset(request.getSeller());
+        Asset assetBuyer = findAsset(request.getBuyer());
 
-        AssetQuantity assetQuantitySeller = assetQuantityRepository.findByPortfolioAndAsset(portfolio, assetSeller)
-                .orElseThrow(() -> new RuntimeException("Asset Investment not found"));
+        Price priceSeller = context.getPriceByAsset().get(assetSeller);
+        Price priceBuyer = context.getPriceByAsset().get(assetBuyer);
 
-        AssetQuantity assetQuantityBuyer = assetQuantityRepository.findByPortfolioAndAsset(portfolio, assetBuyer)
-                .orElseThrow(() -> new RuntimeException("Asset Investment not found"));
+        BigDecimal unitsToSell = calculateUnitEquivalence(request.getSeller().getAmount(), priceSeller);
+        BigDecimal unitsToBuy = calculateUnitEquivalence(request.getBuyer().getAmount(), priceBuyer);
 
-        assetQuantitySeller.setQuantity(assetQuantitySeller.getQuantity().subtract(unitsToSell));
-        assetQuantityBuyer.setQuantity(assetQuantityBuyer.getQuantity().subtract(unitsToBuy));
+        EvolutionUpdaterContext updaterContext = buildUpdaterContext(context, request.getDay(), assetSeller, assetBuyer, unitsToSell, unitsToBuy);
+        updatePortfolio(updaterContext);
 
-        log.info("The new unit investment for Seller is", assetQuantitySeller.getQuantity());
-        log.info("The new unit investment for Buyer is", assetQuantityBuyer.getQuantity());
+        return updaterContext.getResponse();
 
-        assetQuantityRepository.save(assetQuantitySeller);
-        assetQuantityRepository.save(assetQuantityBuyer);
     }
+
+    private BigDecimal calculateUnitEquivalence(BigDecimal amount, Price price) {
+        return amount.divide(price.getPriceAmount(), appConfig.getScale(), RoundingMode.HALF_UP);
+    }
+
+    private Asset findAsset(PortfolioOperationDTO.Transaction request) {
+        return assetRepository.findByNameIgnoreCase(request.getAsset()).orElseThrow(() -> new RuntimeException("Asset not found"));
+    }
+
+    private void updatePortfolio( EvolutionUpdaterContext context) {
+        updaters.forEach(u -> u.update(context));
+    }
+
+    private EvolutionRetrieverContext loadContext(long portfolioId, LocalDate operationDate) {
+        return applyRetrievers(buildRetrieveContext(portfolioId, operationDate));
+    }
+
+    private static EvolutionRetrieverContext buildRetrieveContext(long portfolioId, LocalDate operationDate) {
+        return EvolutionRetrieverContext.builder().portfolioId(portfolioId).startDate(operationDate).endDate(operationDate).build();
+    }
+
+    private EvolutionRetrieverContext applyRetrievers(EvolutionRetrieverContext context) {
+        retrievers.forEach(r -> r.update(context));
+        return context;
+    }
+
 }

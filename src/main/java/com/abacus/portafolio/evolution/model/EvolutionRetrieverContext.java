@@ -19,6 +19,7 @@ public class EvolutionRetrieverContext {
     private Long portfolioId;
     private LocalDate startDate;
     private LocalDate endDate;
+   // private LocalDate currentDate;
 
     private Portfolio portfolio;
     private List<AssetQuantity> assetQuantities;
@@ -27,8 +28,10 @@ public class EvolutionRetrieverContext {
 
 
     private Map<Asset, BigDecimal> assetPrices;
-    private Map<Asset, BigDecimal> totalAmountsByAsset;
-    private BigDecimal portfolioValue;
-    private List<WeightByAssetDTO> weights;
+   // private Map<Asset, BigDecimal> totalAmountsByAsset;
+    //private BigDecimal portfolioValue;
+    //private List<WeightByAssetDTO> weights;
 
+    private Map<Asset, AssetQuantity> quantitiesByAsset;
+    private Map<Asset, Price> priceByAsset;
 }

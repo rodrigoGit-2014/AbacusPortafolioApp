@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Stream;
+
+import static com.abacus.portafolio.evolution.util.EvolutionContextFactory.*;
 
 @Service
 @RequiredArgsConstructor
@@ -20,16 +22,14 @@ public class PortfolioEvolutionService {
     private final List<IEvolutionRetriever> retrievers;
     private final List<IEvolutionCalculatorStep> calculationSteps;
 
-    public List<PortfolioEvolutionDTO> calculateEvolution(Long portfolioId, LocalDate startDate, LocalDate endDate) {
-        EvolutionRetrieverContext context = buildEvolutionRetrieverContext(portfolioId, startDate, endDate);
-        retrievers.forEach(r -> r.update(context));
-        return calculate(context.getPricesGroupedByDate(), context.getAssetQuantities());
-    }
 
-    public List<PortfolioEvolutionDTO> calculate(Map<LocalDate, List<Price>> pricesGroupedByDate, List<AssetQuantity> assetQuantities) {
-        return pricesGroupedByDate.keySet().stream()
-                .sorted()
-                .map(date -> calculateDailyEvolution(date, pricesGroupedByDate.get(date), assetQuantities))
+    public List<PortfolioEvolutionDTO> calculateEvolution(Long portfolioId, LocalDate startDate, LocalDate endDate) {
+        return Stream.iterate(startDate, date -> !date.isAfter(endDate), date -> date.plusDays(1))
+                .map(currentDay -> {
+                    EvolutionRetrieverContext context = loadContext(portfolioId, currentDay);
+                    List<Price> prices = context.getPricesGroupedByDate().get(currentDay);
+                    return calculateDailyEvolution(currentDay, prices, context.getAssetQuantities());
+                })
                 .toList();
     }
 
@@ -39,22 +39,13 @@ public class PortfolioEvolutionService {
         return buildPortfolioEvolutionDTO(date, context);
     }
 
-    private static EvolutionRetrieverContext buildEvolutionRetrieverContext(Long portfolioId, LocalDate startDate, LocalDate endDate) {
-        return EvolutionRetrieverContext.builder().portfolioId(portfolioId).startDate(startDate).endDate(endDate).build();
+    private EvolutionRetrieverContext loadContext(long portfolioId, LocalDate operationDate) {
+        return applyRetrievers(buildRetrieveContext(portfolioId, operationDate));
     }
 
-    private static PortfolioEvolutionDTO buildPortfolioEvolutionDTO(LocalDate date, EvolutionCalculatorContext context) {
-        return new PortfolioEvolutionDTO(
-                date,
-                context.getTotalAsset(),
-                context.getWeightByAsset());
+    private EvolutionRetrieverContext applyRetrievers(EvolutionRetrieverContext context) {
+        retrievers.forEach(r -> r.update(context));
+        return context;
     }
 
-    private static EvolutionCalculatorContext buildEvolutionCalculatorContext(LocalDate date, List<Price> dailyPrices, List<AssetQuantity> assetQuantities) {
-        return EvolutionCalculatorContext.builder()
-                .date(date)
-                .prices(dailyPrices)
-                .quantities(assetQuantities)
-                .build();
-    }
 }
